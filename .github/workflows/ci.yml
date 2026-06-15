@@ -1,0 +1,58 @@
+name: MarketFlow CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: marketflow_test
+          POSTGRES_USER: marketflow_user
+          POSTGRES_PASSWORD: marketflow_pass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        env:
+          ALPHA_VANTAGE_API_KEY: dummy_key_for_tests
+          POSTGRES_DB: marketflow_test
+          POSTGRES_USER: marketflow_user
+          POSTGRES_PASSWORD: marketflow_pass
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+        run: pytest tests/ -v --tb=short
+
+      - name: Lint check
+        run: |
+          pip install flake8
+          flake8 src/ tests/ --max-line-length=120 --ignore=E501,W503

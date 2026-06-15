@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: marketflow_postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-marketflow}
+      POSTGRES_USER: ${POSTGRES_USER:-marketflow_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketflow_pass}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql/init:/docker-entrypoint-initdb.d
+    ports:
+      - "5433:5432"
+    networks:
+      - marketflow_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-marketflow_user} -d ${POSTGRES_DB:-marketflow}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pipeline:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marketflow_pipeline
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
+      POSTGRES_DB: ${POSTGRES_DB:-marketflow}
+      POSTGRES_USER: ${POSTGRES_USER:-marketflow_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketflow_pass}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    volumes:
+      - .:/app
+    networks:
+      - marketflow_net
+    command: python -m src.orchestrate
+
+volumes:
+  postgres_data:
+
+networks:
+  marketflow_net:
+    driver: bridge
