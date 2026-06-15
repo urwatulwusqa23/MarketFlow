@@ -5,3 +5,5 @@ python-dotenv==1.0.0
 pytest==7.4.4
 pytest-mock==3.15.0
 sqlalchemy==2.0.25
+streamlit==1.35.0
+plotly==5.22.0

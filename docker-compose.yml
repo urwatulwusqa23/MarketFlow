@@ -40,6 +40,29 @@ services:
       - marketflow_net
     command: python -m src.orchestrate
 
+  dashboard:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: marketflow_dashboard
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      ALPHA_VANTAGE_API_KEY: ${ALPHA_VANTAGE_API_KEY}
+      POSTGRES_DB: ${POSTGRES_DB:-marketflow}
+      POSTGRES_USER: ${POSTGRES_USER:-marketflow_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-marketflow_pass}
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+    volumes:
+      - .:/app
+    ports:
+      - "8501:8501"
+    networks:
+      - marketflow_net
+    command: streamlit run src/dashboard.py --server.address=0.0.0.0 --server.port=8501
+
 volumes:
   postgres_data:
 
